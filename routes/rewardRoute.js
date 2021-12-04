@@ -11,4 +11,6 @@ router
 
 router.route("/:id").get(rewardController.getOne);
 
+router.route("/rewards/:id").get(rewardController.getRewardList);
+
 module.exports = router;

@@ -23,18 +23,23 @@ exports.getAllReward = async (req, res) => {
 
 exports.getOne = async (req, res) => {
   try {
+    //Executing the query
     const query = await rewardCollection.find({ user_id: req.params.id });
     const len = query[0].lenOfBatches;
+
+    // reading a JSON file
     const rewardTypeList = JSON.parse(
       fs.readFileSync(`${__dirname}/../Rewards.json`)
     );
 
+    //taking rewardAmount
     const rewardArray = [];
     for (let i = 0; i < len; i++) {
       rewardArray.push(rewardTypeList[i].reward);
       console.log(rewardTypeList[i].reward);
     }
 
+    // sending the response
     res.status(201).json({
       status: "SUCCESS",
       data: {
@@ -219,3 +224,52 @@ function check(userObj, categoryDetails) {
 
   return -1;
 }
+
+exports.getRewardList = async function (req, res) {
+  try {
+    // let query = rewardCollection.find({ user_id: req.params.id });
+    // query = query.select("rewardData user_id");
+    // response = await query.sort("-rewardData.rewardDate");
+    // console.log(response);
+
+    const id = req.params.id * 1;
+
+    const query = await rewardCollection.aggregate([
+      {
+        $match: { user_id: id },
+      },
+      {
+        $project: {
+          user_id: 1,
+          rewardData: 1,
+        },
+      },
+      {
+        $unwind: "$rewardData",
+      },
+      {
+        $sort: {
+          "rewardData.rewardDate": -1,
+        },
+      },
+      {
+        $group: {
+          _id: "$user_id",
+          rewardData: { $push: "$rewardData" },
+        },
+      },
+    ]);
+
+    res.status(201).json({
+      status: "SUCCESS",
+      data: query[0],
+      // data: { length: response[0].rewardData.length, result: response[0] },
+    });
+  } catch (err) {
+    res.status(401).json({
+      status: "fail",
+      message: "Invalid!",
+      error: err,
+    });
+  }
+};
